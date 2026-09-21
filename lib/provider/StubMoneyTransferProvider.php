@@ -14,9 +14,32 @@ namespace Provider;
  * MoneyTransferProvider interface doc for why that split exists.
  */
 final class StubMoneyTransferProvider implements MoneyTransferProvider {
-    /** USD-based fixed rates; add pairs here as more corridors are tested. */
+    /**
+     * USD-based fixed rates for testing every corridor the app's country
+     * picker allows — not real market rates, just plausible fixed values so
+     * quotes/transfers work end-to-end for any destination during testing.
+     */
     private const RATES = [
         'USD:INR' => 83.50,
+        'USD:NGN' => 1530.00,
+        'USD:PHP' => 56.20,
+        'USD:MXN' => 18.30,
+        'USD:KES' => 129.00,
+        'USD:GHS' => 15.40,
+        'USD:GBP' => 0.79,
+        'USD:EUR' => 0.92,
+        'USD:CNY' => 7.18,
+        'USD:PKR' => 278.00,
+        'USD:BDT' => 119.50,
+        'USD:VND' => 25400.00,
+        'USD:ZAR' => 18.10,
+        'USD:EGP' => 48.50,
+        'USD:BRL' => 5.40,
+        'USD:CAD' => 1.37,
+        'USD:AUD' => 1.52,
+        'USD:AED' => 3.67,
+        'USD:SGD' => 1.34,
+        'USD:JPY' => 149.50,
     ];
 
     private const FEE_FLAT = 2.99;
