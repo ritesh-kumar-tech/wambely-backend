@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require __DIR__ . '/env.php';
 require __DIR__ . '/lib/autoload.php';
+require __DIR__ . '/lib/mailer.php';
 
 function db(): PDO {
     static $pdo = null;

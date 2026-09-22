@@ -81,9 +81,29 @@ function register(): void {
     );
     $stmt->execute([$requestId, $fullName, $email, password_hash($password, PASSWORD_DEFAULT), $code]);
 
-    // DEV ONLY: no SMS/email provider wired up, so the code is echoed back
-    // here for testing. Remove `debug_code` before any real deployment.
-    respond(['requestId' => $requestId, 'debug_code' => $code]);
+    $debugCode = send_otp_email($email, $code);
+    respond(array_filter(['requestId' => $requestId, 'debug_code' => $debugCode], fn($v) => $v !== null));
+}
+
+/**
+ * Sends the OTP by real email. Returns the code back to the caller ONLY if
+ * sending failed (network hiccup, Brevo outage, misconfigured .env) — a
+ * safety net so testing/registration isn't blocked, not a permanent
+ * feature. Once email delivery is confirmed reliable in production, this
+ * whole fallback (and the `debug_code` field) should be deleted outright.
+ */
+function send_otp_email(string $email, string $code): ?string {
+    try {
+        send_email(
+            $email,
+            'Your Wambely verification code',
+            "Your Wambely verification code is: $code\n\nThis code expires in 10 minutes. If you didn't request this, you can ignore this email."
+        );
+        return null;
+    } catch (\MailerException $e) {
+        error_log('[otp-email] send failed, falling back to debug_code: ' . $e->getMessage());
+        return $code;
+    }
 }
 
 function verify_otp(): void {
@@ -112,15 +132,17 @@ function resend_otp(): void {
     $body = json_input();
     $requestId = (string) ($body['requestId'] ?? '');
 
-    $stmt = db()->prepare('SELECT request_id FROM otp_requests WHERE request_id = ? AND consumed = 0');
+    $stmt = db()->prepare('SELECT email FROM otp_requests WHERE request_id = ? AND consumed = 0');
     $stmt->execute([$requestId]);
-    if (!$stmt->fetch()) fail('That verification request is invalid or already used.');
+    $row = $stmt->fetch();
+    if (!$row) fail('That verification request is invalid or already used.');
 
     $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     db()->prepare('UPDATE otp_requests SET code = ?, expires_at = DATE_ADD(NOW(), INTERVAL 10 MINUTE) WHERE request_id = ?')
         ->execute([$code, $requestId]);
 
-    respond(['ok' => true, 'debug_code' => $code]);
+    $debugCode = send_otp_email($row['email'], $code);
+    respond(array_filter(['ok' => true, 'debug_code' => $debugCode], fn($v) => $v !== null));
 }
 
 function login(): void {
