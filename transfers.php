@@ -54,6 +54,7 @@ $totalDebit = round($sourceAmount + $fee, 2);
 
 try {
     $payout = $provider->createPayout([
+        'customerRef' => $customerRef,
         'sourceWalletRef' => $wallet['walletRef'],
         'beneficiaryRef' => $beneficiary['nium_beneficiary_hash_id'],
         'sourceAmount' => $sourceAmount,

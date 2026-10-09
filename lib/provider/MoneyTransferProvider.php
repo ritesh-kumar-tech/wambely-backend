@@ -47,12 +47,17 @@ interface MoneyTransferProvider {
     /** @param array<string, mixed> $payload @return array{beneficiaryRef: string, payoutRef: ?string} */
     public function createBeneficiary(string $customerRef, array $payload): array;
 
-    /** @return array{exchangeRate: float, fee: float, destinationAmount: float, expiresInSeconds: int, deliveryEstimate: string} */
+    /**
+     * `providerQuoteId` is optional (present for the real Nium provider,
+     * absent for the stub) — quotes.php persists it if given, purely for
+     * audit/debugging; it is not currently threaded through to createPayout().
+     * @return array{exchangeRate: float, fee: float, destinationAmount: float, expiresInSeconds: int, deliveryEstimate: string, providerQuoteId?: string}
+     */
     public function createQuote(string $sourceCurrency, string $destinationCurrency, float $sourceAmount): array;
 
     /**
      * @param array{
-     *   sourceWalletRef: string, beneficiaryRef: string, sourceAmount: float,
+     *   customerRef: string, sourceWalletRef: string, beneficiaryRef: string, sourceAmount: float,
      *   sourceCurrency: string, destinationAmount: float, destinationCurrency: string,
      *   exchangeRate: float, fee: float, totalDebit: float, clientReference: string
      * } $payload

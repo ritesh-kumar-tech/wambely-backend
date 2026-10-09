@@ -79,19 +79,17 @@ final class NiumMoneyTransferProvider implements MoneyTransferProvider {
     }
 
     public function createQuote(string $sourceCurrency, string $destinationCurrency, float $sourceAmount): array {
-        $result = $this->fx->createQuote($sourceCurrency, $destinationCurrency, $sourceAmount);
-        return [
-            'exchangeRate' => (float) ($result['netExchangeRate'] ?? $result['exchangeRate'] ?? 0),
-            'fee' => (float) ($result['fee'] ?? 0),
-            'destinationAmount' => (float) ($result['destinationAmount'] ?? 0),
-            'expiresInSeconds' => (int) ($result['expiresInSeconds'] ?? 300),
-            'deliveryEstimate' => (string) ($result['deliveryEstimate'] ?? ''),
-        ];
+        // NiumFxService already returns exactly this shape (plus
+        // providerQuoteId, which quotes.php persists for later reference).
+        return $this->fx->createQuote($sourceCurrency, $destinationCurrency, $sourceAmount);
     }
 
     public function createPayout(array $payload): array {
         $result = $this->payments->createPayout($payload);
-        return ['payoutRef' => (string) ($result['id'] ?? ''), 'status' => (string) ($result['status'] ?? 'pending')];
+        return [
+            'payoutRef' => (string) ($result['id'] ?? $result['systemReferenceNumber'] ?? ''),
+            'status' => (string) ($result['status'] ?? 'pending'),
+        ];
     }
 
     public function getPayoutStatus(string $payoutRef): array {

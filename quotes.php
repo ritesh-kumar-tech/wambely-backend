@@ -28,11 +28,11 @@ $expiresAt = date('Y-m-d H:i:s', time() + $quote['expiresInSeconds']);
 
 db()->prepare(
     'INSERT INTO nium_quotes
-        (quote_id, user_id, source_currency, destination_currency, source_amount,
+        (quote_id, provider_quote_id, user_id, source_currency, destination_currency, source_amount,
          destination_amount, exchange_rate, fee, delivery_estimate, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 )->execute([
-    $quoteId, $userId, $sourceCurrency, $destinationCurrency, $sourceAmount,
+    $quoteId, $quote['providerQuoteId'] ?? null, $userId, $sourceCurrency, $destinationCurrency, $sourceAmount,
     $quote['destinationAmount'], $quote['exchangeRate'], $quote['fee'], $quote['deliveryEstimate'], $expiresAt,
 ]);
 
