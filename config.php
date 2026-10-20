@@ -120,9 +120,13 @@ function corridor_requirements(string $countryCode): array {
 }
 
 /**
- * Creates (once) or returns the provider customer reference for a user —
- * lazy, so wallet/kyc/recipients endpoints all "just work" right after
- * login instead of requiring a separate blocking onboarding step first.
+ * Returns the provider customer reference for a user, creating one if it
+ * doesn't exist yet. Under the stub provider this is always safe to do
+ * lazily (no real data needed). Under the real Nium provider, customer
+ * creation needs the full KYC profile (personal details + ID document) —
+ * that only exists once kyc.php's document-submission step has actually
+ * run, so this throws a clear error instead of attempting a creation call
+ * that would just fail validation with Nium anyway.
  */
 function ensure_customer_ref(string $userId): string {
     $stmt = db()->prepare('SELECT nium_customer_hash_id, full_name, email, phone FROM users WHERE id = ?');
@@ -131,12 +135,50 @@ function ensure_customer_ref(string $userId): string {
     if (!$user) fail('User not found.', 404);
     if ($user['nium_customer_hash_id']) return $user['nium_customer_hash_id'];
 
-    $result = \Provider\money_transfer_provider()->createCustomer($userId, [
+    $provider = \Provider\money_transfer_provider();
+    if (!($provider instanceof \Provider\StubMoneyTransferProvider)) {
+        fail('Complete identity verification (including your ID document) before using this feature.', 403);
+    }
+
+    $result = $provider->createCustomer($userId, [
         'fullName' => $user['full_name'],
         'email' => $user['email'],
         'phone' => $user['phone'],
     ]);
     return $result['customerRef'];
+}
+
+/**
+ * Assembles everything the real Nium "Unified Add Customer" API needs from
+ * a user's row — personal details collected via kyc.php's
+ * `personal_details` step. Does NOT include the ID document itself (type,
+ * number, issuance country, expiry, file) — kyc.php's `document` step adds
+ * those fresh from the current request, since the uploaded file is never
+ * persisted in our own database (see migration_009's comment).
+ */
+function build_kyc_profile(string $userId): array {
+    $stmt = db()->prepare(
+        'SELECT full_name, email, phone, date_of_birth, nationality, mobile_country_code,
+                address_line1, address_city, address_state, address_postal_code, address_country
+         FROM users WHERE id = ?'
+    );
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+    if (!$user) fail('User not found.', 404);
+
+    return [
+        'fullName' => $user['full_name'],
+        'email' => $user['email'],
+        'phone' => $user['phone'],
+        'dateOfBirth' => $user['date_of_birth'],
+        'nationality' => $user['nationality'],
+        'mobileCountryCode' => $user['mobile_country_code'],
+        'addressLine1' => $user['address_line1'],
+        'addressCity' => $user['address_city'],
+        'addressState' => $user['address_state'],
+        'addressPostalCode' => $user['address_postal_code'],
+        'addressCountry' => $user['address_country'],
+    ];
 }
 
 /** True once the user's KYC/compliance status is fully approved. */

@@ -47,9 +47,14 @@ final class StubMoneyTransferProvider implements MoneyTransferProvider {
 
     public function createCustomer(string $userId, array $profile): array {
         $customerRef = 'stub_cust_' . bin2hex(random_bytes(8));
+        // kyc.php only calls createCustomer() once the document step has
+        // already run (it's the "document submitted" moment for both stub
+        // and real Nium) — so this starts one step further along than a
+        // bare signup, letting the selfie step's auto-approve-on-second-piece
+        // rule in submitKycSelfie() flip it to COMPLETED as before.
         \db()->prepare('UPDATE users SET nium_customer_hash_id = ?, nium_compliance_status = ? WHERE id = ?')
-            ->execute([$customerRef, 'INITIATED', $userId]);
-        return ['customerRef' => $customerRef, 'status' => 'INITIATED'];
+            ->execute([$customerRef, 'IN PROGRESS', $userId]);
+        return ['customerRef' => $customerRef, 'status' => 'IN PROGRESS'];
     }
 
     public function submitKycDocument(string $userId, string $customerRef, string $documentType): array {

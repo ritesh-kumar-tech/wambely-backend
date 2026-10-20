@@ -6,11 +6,11 @@ namespace Nium;
  * Wraps Nium's individual-customer onboarding + status APIs.
  * https://docs.nium.com/docs/onboarding/individual-customers
  *
- * NOTE: createCustomer()'s $payload shape (personal details, address, KYC
- * fields) is Nium's "Unified Add Customer" request body — kept as a plain
- * pass-through array here rather than guessed/hardcoded field names, since
- * the exact required fields for this product config need confirming from
- * the Nium Portal before kyc.php calls this for real.
+ * createCustomer()'s $payload is Nium's confirmed "Unified Add Customer"
+ * request body (confirmed against the real sandbox 2026-10-20) — built by
+ * NiumMoneyTransferProvider::createCustomer() from the app's own KYC
+ * profile shape; kept as a plain pass-through here so this class doesn't
+ * need to know about our app's field names.
  */
 final class NiumCustomerService {
     public function __construct(private readonly NiumClient $client = new NiumClient()) {}

@@ -21,6 +21,15 @@ final class NiumConfig {
     public readonly string $clientHashId;
     public readonly string $webhookSecret;
 
+    /**
+     * Account-specific compliance configuration id Nium's team provides
+     * (ours: confirmed 2026-10 via support — see NiumFxService/NiumCustomerService
+     * doc comments). Required by createCustomer() but not by every other Nium
+     * call, so it's read here but not added to the fail-fast check below —
+     * NiumCustomerService throws its own clear error if this is blank.
+     */
+    public readonly string $complianceTemplateId;
+
     private static ?self $instance = null;
 
     private function __construct() {
@@ -34,6 +43,7 @@ final class NiumConfig {
         $this->apiKey = (string) getenv('NIUM_API_KEY');
         $this->clientHashId = (string) getenv('NIUM_CLIENT_HASH_ID');
         $this->webhookSecret = (string) getenv('NIUM_WEBHOOK_SECRET');
+        $this->complianceTemplateId = (string) getenv('NIUM_COMPLIANCE_TEMPLATE_ID');
 
         $missing = [];
         if ($this->baseUrl === '') $missing[] = $baseUrlVar;
