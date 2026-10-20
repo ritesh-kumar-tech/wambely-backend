@@ -56,14 +56,30 @@ final class NiumMoneyTransferProvider implements MoneyTransferProvider {
         throw new \RuntimeException("No $currencyCode wallet exists for this customer and creating one isn't wired up yet.");
     }
 
+    /**
+     * Confirmed response shape (2026-10-20, real sandbox call): a JSON array
+     * of wallet objects, each holding MULTIPLE currency balances —
+     * `[{ "walletHashId": "...", "currencies": [{ "code": "USD", "balance": 0.0, "default": true }, ...] }]`
+     * — not one wallet per currency as originally assumed. Flattened here
+     * into the one-row-per-currency shape the rest of the app expects;
+     * `walletRef` is the same walletHashId for every currency on that
+     * wallet, since Nium addresses a currency balance by (walletHashId,
+     * currencyCode) together, not by a separate ref per currency.
+     */
     public function getWallets(string $customerRef): array {
-        $result = $this->wallets->getWallets($customerRef);
-        $list = $result['wallets'] ?? $result['content'] ?? (is_array($result) && array_is_list($result) ? $result : []);
-        return array_map(fn(array $w) => [
-            'walletRef' => (string) ($w['walletHashId'] ?? ''),
-            'currencyCode' => (string) ($w['currencyCode'] ?? ''),
-            'balance' => (float) ($w['balance'] ?? 0),
-        ], $list);
+        $wallets = $this->wallets->getWallets($customerRef);
+        $rows = [];
+        foreach ($wallets as $wallet) {
+            $walletRef = (string) ($wallet['walletHashId'] ?? '');
+            foreach ($wallet['currencies'] ?? [] as $currency) {
+                $rows[] = [
+                    'walletRef' => $walletRef,
+                    'currencyCode' => (string) ($currency['code'] ?? ''),
+                    'balance' => (float) ($currency['balance'] ?? 0),
+                ];
+            }
+        }
+        return $rows;
     }
 
     public function fundWallet(string $walletRef, float $amount): array {
